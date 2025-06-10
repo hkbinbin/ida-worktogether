@@ -11,18 +11,19 @@ from enum import Enum
 class ClientAction(Enum):
     RENAME_FUNC = 1
 
-# arg list
+# config list
 server_host = "192.168.3.177"
 server_port = 9999
 stop_flag = False  # 全局终止标志
 _server_socket = None
 
+PINCODE = "7a29293b1919e727162fa2362a"
 username = "munan"
 prefix = "Th1S_Fu@c_By_Se2er_"
 suffix = "_6c436feecb5d3f4a7274ba2081d39_"
 
 # fix arg
-filename = ida_nalt.retrieve_input_file_sha256().hex()
+filename = "IDA_"+ida_nalt.retrieve_input_file_sha256().hex()[:16]
 
 # log_func 
 def log_fail(msg):
@@ -52,7 +53,7 @@ def proto_header() -> dict:
         "header" : "1551",
         "reversed" : base64.b64encode(b"\x00" * 4).decode("utf-8"),
         "username" : username,
-        "filename" : username,
+        'filename' : filename,
     }
     return data
 
@@ -92,6 +93,12 @@ def connect_server():
     global _server_socket
     _server_socket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     _server_socket.connect((server_host,server_port))
+    data = {
+        "auth" : PINCODE,
+        'filename' : filename,
+    }
+    j_data = json.dumps(data)
+    _server_socket.sendall(j_data.encode())
 
 def receive_messages():
     while not stop_flag:
