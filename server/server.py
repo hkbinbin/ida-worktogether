@@ -56,13 +56,8 @@ class MyTCPServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True  # 防止"address already in use"错误
 
 if __name__ == "__main__":
-<<<<<<< HEAD
     db_api.initial("Testing")
     exit(1)
-=======
-    conn = init_database()
-
->>>>>>> eee8195ce3345a74f50c6c7c643e0336ec1ce5b4
     HOST, PORT = "0.0.0.0", 9999
     with MyTCPServer((HOST, PORT), MyTCPHandler) as server:
         print(f"服务器启动，监听 {HOST}:{PORT}")
