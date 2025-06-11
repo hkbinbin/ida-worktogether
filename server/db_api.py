@@ -62,12 +62,10 @@ def create_table(database_name, table_name):
     connection.close()
 
 def initial(database_name:str) -> None:
-    if create_database(database_name) == False:
-        # print("表格已存在")
-        return
-    
-    create_table(database_name,'function')
-    create_table(database_name,'structure')
+    create_database(database_name)
+    create_table(database_name,'IDA_function')
+    create_table(database_name,'IDA_structure')
+    create_table(database_name,'IDA_comment')
 
 def store_data(database_name:str, table_name:str, editor:str, json_data:str) -> None:
     connection = get_connection(database_name)

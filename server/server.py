@@ -37,8 +37,11 @@ class ConnectionManager:
 
 conn_manager = ConnectionManager()
 
+
+
 class ClientAction(Enum):
     RENAME_FUNC = 1
+    EDIT_CMT = 2
 
 def process_buffer_from_client(data: bytes):
     data = data.decode()
@@ -46,10 +49,12 @@ def process_buffer_from_client(data: bytes):
     editor = data_json['username']
     clientaction = data_json["clientaction"]
     filename = data_json['filename']
-    if clientaction == ClientAction.RENAME_FUNC.value:
-        db_api.store_data(database_name=filename,table_name="function",editor=editor,json_data=data)
-        return
-    
+    db_api.store_data(database_name=filename,table_name=action_to_table[clientaction],editor=editor,json_data=data)
+    return
+
+action_to_table = dict()
+action_to_table[ClientAction.RENAME_FUNC.value] = "IDA_function"
+action_to_table[ClientAction.EDIT_CMT.value] = "IDA_comment"
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
