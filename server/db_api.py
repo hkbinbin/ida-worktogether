@@ -2,12 +2,8 @@ import psycopg2
 from collections import defaultdict
 
 import psycopg2.sql
+from config_ import *
 
-# pg_database config
-USER = 'postgres'
-PASSWORD = 'sxsxno12'
-PG_IP = "localhost"
-PG_PORT = 5432
 
 # Server_connect
 _pgsql_connection = None

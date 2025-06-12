@@ -2,13 +2,10 @@ import sqlite3
 import socketserver
 import threading
 import json
+from enum import Enum
 # local_import
 import db_api
-from enum import Enum
-
-# 配置列表
-PINCODE = "7a29293b1919e727162fa2362a"
-
+from config_ import *
 
 class ConnectionManager:
     def __init__(self):
@@ -27,27 +24,21 @@ class ConnectionManager:
     def broadcast(self, message, exclude_request=None):
         with self.lock:
             for conn in self.connections:
-                if conn != exclude_request:
+                if True: #conn != exclude_request:
                     try:
                         conn.sendall(message)
                     except:
-                        # 连接可能已关闭
                         self.remove_connection(conn)
                 
 
 conn_manager = ConnectionManager()
-
-
-
-class ClientAction(Enum):
-    RENAME_FUNC = 1
-    EDIT_CMT = 2
 
 def process_buffer_from_client(data: bytes):
     data = data.decode()
     data_json = json.loads(data)
     editor = data_json['username']
     clientaction = data_json["clientaction"]
+    print(clientaction)
     filename = data_json['filename']
     db_api.store_data(database_name=filename,table_name=action_to_table[clientaction],editor=editor,json_data=data)
     return
@@ -55,12 +46,12 @@ def process_buffer_from_client(data: bytes):
 action_to_table = dict()
 action_to_table[ClientAction.RENAME_FUNC.value] = "IDA_function"
 action_to_table[ClientAction.EDIT_CMT.value] = "IDA_comment"
+action_to_table[ClientAction.RENAME_LVAR.value] = "IDA_function"
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
-        # 处理客户端连接
-        print(f"客户端 {self.client_address} 已连接")
-        # 确认握手信息
+        print(f"client {self.client_address} connected")
+        # handshake
         try:
             data = self.request.recv(1024)
             j_data = json.loads(data.decode())
@@ -77,13 +68,11 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
                 data = self.request.recv(1024)
                 if not data:
                     break
-                # 处理数据
                 process_buffer_from_client(data)
-                # 广播给其他客户端
                 conn_manager.broadcast(data, exclude_request=self.request)
         finally:
             conn_manager.remove_connection(self.request)
-            print(f"客户端 {self.client_address} 已断开")
+            print(f"client {self.client_address} disconnection")
 
 class MyTCPServer(socketserver.ThreadingTCPServer):
     daemon_threads = True
@@ -93,14 +82,15 @@ if __name__ == "__main__":
     HOST, PORT = "0.0.0.0", 9999
     try_connect = db_api.get_connection("postgres")
     if try_connect is None:
-        print(f"连接数据库失败")
+        print(f"connect database failed")
         exit(0)
     with MyTCPServer((HOST, PORT), MyTCPHandler) as server:
-        print(f"服务器启动，监听 {HOST}:{PORT}")
+        print(f"server started at: {HOST}:{PORT}")
         try:
             server.serve_forever()
         except KeyboardInterrupt:
-            print("\n正在关闭服务器...")
+            print("="*0x10)
+            print("Closing...")
             server.shutdown()
             server.server_close()
-            print("服务器已关闭")
+            print("closed")
