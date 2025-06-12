@@ -1,9 +1,14 @@
 import sqlite3
 import socketserver
 import threading
-
+import json
 # local_import
 import db_api
+from enum import Enum
+
+# 配置列表
+PINCODE = "7a29293b1919e727162fa2362a"
+
 
 class ConnectionManager:
     def __init__(self):
@@ -32,21 +37,50 @@ class ConnectionManager:
 
 conn_manager = ConnectionManager()
 
+
+
+class ClientAction(Enum):
+    RENAME_FUNC = 1
+    EDIT_CMT = 2
+
+def process_buffer_from_client(data: bytes):
+    data = data.decode()
+    data_json = json.loads(data)
+    editor = data_json['username']
+    clientaction = data_json["clientaction"]
+    filename = data_json['filename']
+    db_api.store_data(database_name=filename,table_name=action_to_table[clientaction],editor=editor,json_data=data)
+    return
+
+action_to_table = dict()
+action_to_table[ClientAction.RENAME_FUNC.value] = "IDA_function"
+action_to_table[ClientAction.EDIT_CMT.value] = "IDA_comment"
+
 class MyTCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
         # 处理客户端连接
         print(f"客户端 {self.client_address} 已连接")
+        # 确认握手信息
+        try:
+            data = self.request.recv(1024)
+            j_data = json.loads(data.decode())
+            auth = j_data['auth']
+            filename = j_data['filename']
+            if auth != PINCODE:
+                return
+            db_api.initial(filename)
+        except:
+            return
         conn_manager.add_connection(self.request)
         try:
             while True:
                 data = self.request.recv(1024)
                 if not data:
                     break
-                print(f"收到来自 {self.client_address} 的数据: {data}")
-                # 广播给所有其他客户端
+                # 处理数据
+                process_buffer_from_client(data)
+                # 广播给其他客户端
                 conn_manager.broadcast(data, exclude_request=self.request)
-                # 回传数据给发送者
-                # self.request.sendall(b"Server: Message received and broadcasted")
         finally:
             conn_manager.remove_connection(self.request)
             print(f"客户端 {self.client_address} 已断开")
@@ -56,9 +90,11 @@ class MyTCPServer(socketserver.ThreadingTCPServer):
     allow_reuse_address = True  # 防止"address already in use"错误
 
 if __name__ == "__main__":
-    db_api.initial("Testing")
-    exit(1)
     HOST, PORT = "0.0.0.0", 9999
+    try_connect = db_api.get_connection("postgres")
+    if try_connect is None:
+        print(f"连接数据库失败")
+        exit(0)
     with MyTCPServer((HOST, PORT), MyTCPHandler) as server:
         print(f"服务器启动，监听 {HOST}:{PORT}")
         try:
