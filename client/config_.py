@@ -2,8 +2,8 @@ import ida_nalt
 from enum import Enum
 import socket
 # config list
-server_host = "localhost"
-server_port = 9999
+server_host = "172.28.111.106"
+server_port = 19999
 stop_flag = False  # global stop flag
 _server_socket = None
 
