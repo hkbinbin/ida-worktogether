@@ -13,6 +13,7 @@ _server_comment_changed_cache = ""
 
 def client_edit_comment_buffer(comment_ea:int, cmt:str) -> str:
     proto_buffer = proto_header()
+    proto_buffer["index_ea"] = comment_ea
     proto_buffer["clientaction"] = ClientAction.EDIT_CMT.value
     proto_buffer["comment_ea"] = comment_ea
     proto_buffer["cmt"] = cmt

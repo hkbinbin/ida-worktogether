@@ -47,7 +47,9 @@ def create_table(database_name, table_name):
     query = psycopg2.sql.SQL("""
         CREATE TABLE IF NOT EXISTS {table} (
             id SERIAL PRIMARY KEY,
+            index_ea BIGINT DEFAULT -1,
             editor VARCHAR(255) NOT NULL,
+            clientaction INT DEFAULT -1,
             json TEXT NOT NULL,
             timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
@@ -59,18 +61,53 @@ def create_table(database_name, table_name):
 
 def initial(database_name:str) -> None:
     create_database(database_name)
+    print(1)
     create_table(database_name,'IDA_function')
+    print(2)
     create_table(database_name,'IDA_structure')
+    print(3)
     create_table(database_name,'IDA_comment')
+    print(4)
 
-def store_data(database_name:str, table_name:str, editor:str, json_data:str) -> None:
+def store_data(database_name:str, table_name:str, editor:str, json_data:str, index_ea:int, clientaction:int) -> None:
     connection = get_connection(database_name)
     cursor = _pgsql_connection.cursor()
     query = psycopg2.sql.SQL("""
-        INSERT INTO {table} (editor, json) VALUES (%s, %s)
-                             """).format(table=psycopg2.sql.Identifier(table_name))
-
-    cursor.execute(query, (editor, json_data))
+        INSERT INTO {table} (editor, json, index_ea, clientaction) VALUES (%s, %s, %s, %s)""").format(table=psycopg2.sql.Identifier(table_name))
+    cursor.execute(query, (editor, json_data, index_ea, clientaction))
     connection.commit()
     cursor.close()
     connection.close()
+
+def get_all_data_with_ea_action_filter(database_name, table_name, index_ea, clientaction):
+    """Retrieve all data and column names from a table in the specified database."""
+    try:
+        connection = get_connection(database_name)
+        cursor = connection.cursor()
+        query = psycopg2.sql.SQL("""
+            SELECT * FROM {table} WHERE index_ea = %s AND clientaction = %s;
+        """).format(table=psycopg2.sql.Identifier(table_name))
+        cursor.execute(query, (index_ea, clientaction))
+        data = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+        cursor.close()
+        connection.close()
+        return column_names, data
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        connection.close()
+        return None, None
+
+def get_column_data(column_names, data, column_name):
+    """从查询结果中提取指定列的数据"""
+    if column_names and data:
+        if column_name in column_names:
+            column_index = column_names.index(column_name)
+            column_data = [row[column_index] for row in data]
+            return column_data
+        else:
+            print(f"Column '{column_name}' not found.")
+            return None
+    else:
+        print("No data retrieved.")
+        return None

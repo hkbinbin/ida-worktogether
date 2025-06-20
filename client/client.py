@@ -107,9 +107,24 @@ def connect_server():
     data = {
         "auth" : PINCODE,
         'filename' : filename,
+        'sub' : 0,
     }
     j_data = json.dumps(data)
     config_._server_socket.sendall(j_data.encode())
+    data = config_._server_socket.recv(24)
+    if data.startswith(b"ACKed"):
+        return
+    else:
+        raise("Error")
+
+def process_messages():
+    while True:
+        if config_.msg_int_flag == False:
+            time.sleep(0.5)
+        else:
+            print("get one")
+            data = config_.msg_queue.get()
+            parse_boardcast_buffer(data)
 
 def receive_messages():
     while not stop_flag:
@@ -119,7 +134,8 @@ def receive_messages():
                 log_fail("disconnect with server")
                 break
             # log_success(f": {data}")
-            parse_boardcast_buffer(data)
+            print("put one")
+            config_.msg_queue.put(data)
         except ConnectionResetError:
             log_fail("connection reset")
             break
@@ -146,6 +162,8 @@ def run_main():
     # start msg recv thread
     recv_thread = threading.Thread(target=receive_messages, daemon=True)
     recv_thread.start()
+    process_thread = threading.Thread(target=process_messages, daemon=True)
+    process_thread.start()
 
     while not stop_flag:  # check stop flag
         time.sleep(5)

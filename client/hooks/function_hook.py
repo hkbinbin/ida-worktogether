@@ -8,6 +8,7 @@ import config_
 
 def client_rename_func_buffer(ea, new_name) -> str:
     proto_buffer = proto_header()
+    proto_buffer["index_ea"] = ea
     proto_buffer["clientaction"] = ClientAction.RENAME_FUNC.value
     proto_buffer["ea"] = ea
     proto_buffer["new_name"] = new_name
@@ -20,9 +21,8 @@ class FunctionIDBHook(idaapi.IDB_Hooks):
         if new_name.endswith(suffix) and new_name.startswith(prefix):
             return 0
         if old_name.endswith(suffix) and old_name.startswith(prefix):
-            print(f"函数重命名: 0x{ea:X} -> {new_name} By server")
+            print(f"function rename: 0x{ea:X} -> {new_name} By server")
             return 0
-        # print(f"函数重命名: 0x{ea:X} -> {new_name}")
         buffer = client_rename_func_buffer(ea,new_name)
         buffer = buffer.encode()
         config_._server_socket.sendall(buffer)
